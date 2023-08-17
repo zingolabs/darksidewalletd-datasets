@@ -202,7 +202,7 @@ def main():
 
     after_info = get_blockchain_info()
 
-    assert blocks == 100001
+    assert blocks == 102
     assert commitments > 0
 
 def send_filler_transaction(address):
