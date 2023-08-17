@@ -134,6 +134,7 @@ def main():
                }
             ],
             1, # minconf
+            None, # default ZIP-317 fee
             "AllowRevealedAmounts"
         ],
         "jsonrpc": "2.0",
@@ -187,6 +188,7 @@ def main():
                 }
             ],
             1, # minconf
+            None, # default ZIP-317 fee
             "AllowRevealedAmounts"
         ],
         "jsonrpc": "2.0",
@@ -216,6 +218,7 @@ def send_filler_transaction(address):
                }
             ],
             1, # minconf
+            None, # default ZIP-317 fee
             "AllowRevealedAmounts" 
         ],
         "jsonrpc": "2.0",
