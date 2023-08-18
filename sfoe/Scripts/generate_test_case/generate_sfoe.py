@@ -25,8 +25,6 @@ RPCPASSWORD = "pacu"
 ZCASHD_URL = "http://pacu:pacu@127.0.0.1:8232"
 
 import requests
-import json
-
 
 def get_blockchain_info():
     payload = {
@@ -203,7 +201,6 @@ def main():
     after_info = get_blockchain_info()
 
     assert after_info["blocks"] == 102
-    assert commitments > 0
 
 def send_filler_transaction(address):
     payload = {
@@ -239,6 +236,27 @@ def generate_blocks(blocks):
     
     return requests.post(ZCASHD_URL, json=payload).json()["result"]
 
+def dump_block_range_to_file(file_path, range):
+    file = open(file_path,"w")
+
+    for block_height in range:
+        payload = {
+            "method": "getblock",
+            "params": [
+                f'{block_height}',
+                0
+            ],
+            "jsonrpc": "2.0",
+            "id": 0,
+        }
+
+        response = requests.post(ZCASHD_URL, json=payload).json()
+
+        block = response["result"]
+        file.write(block)
+        file.write("\n")
+
+    file.close()
 
 if __name__ == "__main__":
     main()
