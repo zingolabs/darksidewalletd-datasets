@@ -21,10 +21,37 @@ FILLER_BLOCK_COUNT = 100
 # Config stuff
 RPCUSER = "pacu"
 RPCPASSWORD = "pacu"
-
+POLICY = "FullPrivacy"
 ZCASHD_URL = "http://pacu:pacu@127.0.0.1:8232"
 
 import requests
+import time
+def get_new_account():
+    payload = {
+        "method": "z_getnewaccount",
+        "params": [],
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    result = requests.post(ZCASHD_URL, json=payload).json()["result"]
+    return result["account"]
+
+def get_new_address_for_account(account):
+    payload = {
+        "method": "z_getaddressforaccount",
+        "params": [account],
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+
+    result = requests.post(ZCASHD_URL, json=payload).json()["result"]
+    return result["address"]
+
+def get_addresses_for_account(addresses_count, account):
+    addresses = []
+    for i in range(0,addresses_count):
+        addresses.append(get_new_address_for_account(account))
+    return addresses
 
 def get_blockchain_info():
     payload = {
@@ -37,13 +64,12 @@ def get_blockchain_info():
     return requests.post(ZCASHD_URL, json=payload).json()["result"]
 
 def main():
-    # generate first block
+    # get blockchain info
    
     info = get_blockchain_info()
     chain = info["chain"] 
     blocks = info["blocks"]
     commitments = info["commitments"]
-
 
     assert chain == "regtest"
     assert blocks == 0
@@ -52,14 +78,50 @@ def main():
     
     print("Zcashd regtest ready on zero blocks")
 
-    print("generating First block")
+    print("generate account 0")
 
-    blockhashes = generate_blocks(1)
+    account = get_new_account()
+
+    print(f'generate new address for account {account}')
+
+    miner_addresses = get_addresses_for_account(100, account)
+
+    print("generating First 200 blocks")
+
+    blockhashes = generate_blocks(200)
 
     assert len(blockhashes) > 0
     
     print(f'Generated block hashes {blockhashes}')
 
+    # shield the first 100 mature coinbases
+    shielded_op_id = shield_coinbase(
+        "*",
+        miner_addresses[0],
+        0, # all coinbases
+        "AllowRevealedSenders"
+    )
+    
+    print(f'shielded coinbase {shielded_op_id}')
+
+    time.sleep(10)
+    # mine the shielded coinbases
+    print(f'generate 1 block {generate_blocks(1)}')
+    time.sleep(1)
+    print(f'generate 1 block {generate_blocks(1)}')
+    time.sleep(1)
+
+    # break the balance of miner wallet in smaller notes
+    print("break the balance of miner wallet in smaller notes")
+    op_ids = break_shielded_balance_into(addresses=miner_addresses, fractioned_value=0.1,  account=account, rounds=10)
+
+    print(f'value broken into op-ids \n {op_ids}')
+
+    # generate some blocks so that the Tx breaking the balance are mined
+    print(f'Generated blocks: [ \n {generate_blocks(10)} \n]')
+
+
+    print(f'SFoE starting at height {get_blockchain_info()["estimatedheight"]}')
     # first z_sendmany
     # 10 unspent commitments for User wallet
     # 2 filler outputs for filler wallet
@@ -67,7 +129,7 @@ def main():
     payload = {
         "method": "z_sendmany",
         "params": [
-            "ANY_TADDR", # fromaddress
+            miner_addresses[0], # fromaddress
 
             # amounts
             [  # note 1
@@ -133,7 +195,7 @@ def main():
             ],
             1, # minconf
             None, # default ZIP-317 fee
-            "AllowRevealedAmounts"
+            POLICY
         ],
         "jsonrpc": "2.0",
         "id": 0,
@@ -147,18 +209,20 @@ def main():
 
     print(f'Sent Txid: {opid}')
 
-
+    # generate a block to 
     # start generating filler blocks
 
     print("start generating filler blocks")
 
     for x in range(0,FILLER_BLOCK_COUNT):
         print(f'filler block {x + 1}')
+
+        from_address = miner_addresses[x % len(miner_addresses)]
         # generate a transaction for filler wallet
-        filler_tx_1 = send_filler_transaction(FILLER_ADDRESSES[0])
+        filler_tx_1 = send_filler_transaction(from_address, FILLER_ADDRESSES[0])
         print(f'sent filler transaction 1 txid {filler_tx_1}')
 
-        filler_tx_2 = send_filler_transaction(FILLER_ADDRESSES[1])
+        filler_tx_2 = send_filler_transaction(from_address, FILLER_ADDRESSES[1])
         print(f'sent filler transaction 2 txid {filler_tx_2}')
         
         # generate block
@@ -171,7 +235,7 @@ def main():
     payload = {
         "method": "z_sendmany",
         "params": [
-            "ANY_TADDR", # fromaddress
+            miner_addresses[0], # fromaddress
 
             # amounts
             [  # note 1
@@ -187,7 +251,7 @@ def main():
             ],
             1, # minconf
             None, # default ZIP-317 fee
-            "AllowRevealedAmounts"
+            POLICY
         ],
         "jsonrpc": "2.0",
         "id": 0,
@@ -200,23 +264,117 @@ def main():
 
     after_info = get_blockchain_info()
 
-    assert after_info["blocks"] == 102
+    assert after_info["blocks"] == 302
 
-def send_filler_transaction(address):
+def shield_coinbase(from_addr, to_addr, limit, policy):
+    payload = {
+        "method": "z_shieldcoinbase",
+        "params": [
+            from_addr,
+            to_addr,
+            None,
+            limit,  
+            None, # memo
+            policy
+        ],
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+
+    response = requests.post(ZCASHD_URL, json=payload).json()
+
+    return response["result"]
+
+def get_spendable_shielded_balance(account, pool, min_conf):
+    payload = {
+        "method": "z_getbalanceforaccount",
+        "params": [
+            account, 
+            min_conf
+        ],
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+
+    response = requests.post(ZCASHD_URL, json=payload).json()
+
+    pools = response["result"]["pools"]
+
+    if pool in pools:
+        return pools[pool]["valueZat"]
+    else:
+        return 0
+
+
+## Spends all available shielded balance into the given addresses
+## with the provided fractioned value
+def break_shielded_balance_into(addresses, fractioned_value, account, rounds):
+    op_ids = []
+    spendable_balance = get_spendable_shielded_balance(account, "orchard", 1)
+
+    for i in range(0,rounds):
+        if spendable_balance <= 0: return op_ids
+        # orchard max recipient count is 50 but is too much to process for a docker box
+        recipient_count = min(10, round(spendable_balance / fractioned_value))
+        recipients = gen_recipients(recipient_count, addresses, fractioned_value)
+        op_ids.append(
+            zend_many(addresses[0], recipients, 1, POLICY)
+        )
+        
+        generate_blocks(1)
+
+        spendable_balance = get_spendable_shielded_balance(account, "orchard", 1)
+    
+    return op_ids
+
+## Generates recipient list of size {count} doing a round-robin distribution of {value} ZEC  
+## over the {addressses} given 
+def gen_recipients(count, addresses, value):
+    recipients = []
+    for i in range(0,count):
+        recipients.append(
+            {
+                "address": addresses[i % len(addresses)],
+                "amount": value
+            }
+        )
+    return recipients
+
+## uses `z_sendmany` to send ZEC to the {recipients} list with {min_conf} and
+## the given {policy}
+def zend_many(from_address, recipients, min_conf, policy):
     payload = {
         "method": "z_sendmany",
         "params": [
-            "ANY_TADDR", # fromaddress
+            from_address, # fromaddress
+            recipients,
+            min_conf, # minconf
+            None, # default ZIP-317 fee
+            policy
+        ],
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+
+    response = requests.post(ZCASHD_URL, json=payload).json()
+
+    return response["result"]
+
+def send_filler_transaction(from_address, to_address):
+    payload = {
+        "method": "z_sendmany",
+        "params": [
+            from_address, # fromaddress
             # amounts
             [  # note 1
                {
-                   "address": address,
+                   "address": to_address,
                    "amount" : 0.0001
                }
             ],
             1, # minconf
             None, # default ZIP-317 fee
-            "AllowRevealedAmounts" 
+            POLICY
         ],
         "jsonrpc": "2.0",
         "id": 0,
@@ -257,6 +415,27 @@ def dump_block_range_to_file(file_path, range):
         file.write("\n")
 
     file.close()
+
+def wait_for_opid_and_report_result(opid, timeout):
+    payload = {
+            "method": "z_getoperationstatus",
+            "params": [
+                opid
+            ],
+            "jsonrpc": "2.0",
+            "id": 0,
+        }
+    response = requests.post(ZCASHD_URL, json=payload).json()
+
+    result = response["result"]
+
+    while timeout > 0 and result["status"] == "executing" or result["status"] == "queued":
+        time.sleep(1)
+        timeout = timeout - 1
+        response = requests.post(ZCASHD_URL, json=payload).json()
+        result = response["result"]
+
+    return result
 
 if __name__ == "__main__":
     main()
