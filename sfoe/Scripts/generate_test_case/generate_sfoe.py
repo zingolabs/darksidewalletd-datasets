@@ -17,7 +17,7 @@ FILLER_ADDRESSES = [
     "uregtest1z8s5szuww2cnze042e0re2ez8l3d04zvkp7kslxwdha6tp644srd4nh0xlp8a05avzduc6uavqkxv79x53c60hrc0qsgeza3age2g3qualullukd4s0lsn6mtfup4z8jz6xdz2c05zakhafc7pmw0dwugwu9ljevzgyc3mfwxg9slr87k8l7cq075gl3fgxpr85uuvxhxydrskp2303"
 ]
 
-FILLER_BLOCK_COUNT = 100
+FILLER_BLOCK_COUNT = 2
 # Config stuff
 RPCUSER = "pacu"
 RPCPASSWORD = "pacu"
@@ -94,7 +94,60 @@ def main():
     
     print(f'Generated block hashes {blockhashes}')
 
-    # shield the first 100 mature coinbases
+    # shield the mature coinbases
+    shielded_op_id = shield_coinbase(
+        "*",
+        miner_addresses[0],
+        1, # one coinbase
+        "AllowRevealedSenders"
+    )
+    
+    print(f'shielded coinbase {shielded_op_id}')
+
+    time.sleep(3)
+    # mine the shielded coinbases
+    print(f'generate 1 block {generate_blocks(1)}')
+
+    shielded_op_id = shield_coinbase(
+        "*",
+        miner_addresses[0],
+        1, # one coinbase
+        "AllowRevealedSenders"
+    )
+    
+    print(f'shielded coinbase {shielded_op_id}')
+
+    time.sleep(3)
+    # mine the shielded coinbases
+    print(f'generate 1 block {generate_blocks(1)}')
+
+    shielded_op_id = shield_coinbase(
+        "*",
+        miner_addresses[0],
+        1, # one coinbase
+        "AllowRevealedSenders"
+    )
+    
+    print(f'shielded coinbase {shielded_op_id}')
+
+    time.sleep(3)
+    # mine the shielded coinbases
+    print(f'generate 1 block {generate_blocks(1)}')
+
+    shielded_op_id = shield_coinbase(
+        "*",
+        miner_addresses[0],
+        1, # one coinbase
+        "AllowRevealedSenders"
+    )
+    
+    print(f'shielded coinbase {shielded_op_id}')
+
+    time.sleep(3)
+    
+    # mine the shielded coinbases
+    print(f'generate 1 block {generate_blocks(1)}')
+
     shielded_op_id = shield_coinbase(
         "*",
         miner_addresses[0],
@@ -104,7 +157,7 @@ def main():
     
     print(f'shielded coinbase {shielded_op_id}')
 
-    time.sleep(10)
+    time.sleep(3)
     # mine the shielded coinbases
     print(f'generate 1 block {generate_blocks(1)}')
     time.sleep(1)
@@ -112,13 +165,13 @@ def main():
     time.sleep(1)
 
     # break the balance of miner wallet in smaller notes
-    print("break the balance of miner wallet in smaller notes")
-    op_ids = break_shielded_balance_into(addresses=miner_addresses, fractioned_value=0.1,  account=account, rounds=10)
+    #print("break the balance of miner wallet in smaller notes")
+    #op_ids = break_shielded_balance_into(addresses=miner_addresses, fractioned_value=0.1,  account=account, rounds=10)
 
-    print(f'value broken into op-ids \n {op_ids}')
+    #print(f'value broken into op-ids \n {op_ids}')
 
     # generate some blocks so that the Tx breaking the balance are mined
-    print(f'Generated blocks: [ \n {generate_blocks(10)} \n]')
+    #print(f'Generated blocks: [ \n {generate_blocks(10)} \n]')
 
 
     print(f'SFoE starting at height {get_blockchain_info()["estimatedheight"]}')
