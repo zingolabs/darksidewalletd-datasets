@@ -104,7 +104,7 @@ def main():
     
     print(f'shielded coinbase {shielded_op_id}')
 
-    time.sleep(3)
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
     # mine the shielded coinbases
     print(f'generate 1 block {generate_blocks(1)}')
 
@@ -117,9 +117,12 @@ def main():
     
     print(f'shielded coinbase {shielded_op_id}')
 
-    time.sleep(3)
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
+
     # mine the shielded coinbases
     print(f'generate 1 block {generate_blocks(1)}')
+
+    time.sleep(1)
 
     shielded_op_id = shield_coinbase(
         "*",
@@ -130,9 +133,12 @@ def main():
     
     print(f'shielded coinbase {shielded_op_id}')
 
-    time.sleep(3)
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
+    
     # mine the shielded coinbases
     print(f'generate 1 block {generate_blocks(1)}')
+
+    time.sleep(1)
 
     shielded_op_id = shield_coinbase(
         "*",
@@ -143,11 +149,12 @@ def main():
     
     print(f'shielded coinbase {shielded_op_id}')
 
-    time.sleep(3)
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
     
     # mine the shielded coinbases
     print(f'generate 1 block {generate_blocks(1)}')
 
+    time.sleep(1)
     shielded_op_id = shield_coinbase(
         "*",
         miner_addresses[0],
@@ -157,7 +164,7 @@ def main():
     
     print(f'shielded coinbase {shielded_op_id}')
 
-    time.sleep(3)
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
     # mine the shielded coinbases
     print(f'generate 1 block {generate_blocks(1)}')
     time.sleep(1)
@@ -258,6 +265,8 @@ def main():
 
     opid = response["result"]
 
+    wait_for_opid_and_report_result(opid, 10)
+
     assert len(opid) > 0
 
     print(f'Sent Txid: {opid}')
@@ -272,15 +281,18 @@ def main():
 
         from_address = miner_addresses[x % len(miner_addresses)]
         # generate a transaction for filler wallet
-        filler_tx_1 = send_filler_transaction(from_address, FILLER_ADDRESSES[0])
-        print(f'sent filler transaction 1 txid {filler_tx_1}')
+        filler_tx_1_opid = send_filler_transaction(from_address, FILLER_ADDRESSES[0])
+        print(f'sent filler transaction 1 opid {filler_tx_1_opid}')
+        wait_for_opid_and_report_result(filler_tx_1_opid, 10)
 
-        filler_tx_2 = send_filler_transaction(from_address, FILLER_ADDRESSES[1])
-        print(f'sent filler transaction 2 txid {filler_tx_2}')
+        filler_tx_2_opid = send_filler_transaction(from_address, FILLER_ADDRESSES[1])
+        print(f'sent filler transaction 2 opid {filler_tx_2_opid}')
+        wait_for_opid_and_report_result(filler_tx_2_opid, 10)
         
         # generate block
         new_blocks = generate_blocks(1)
 
+        time.sleep(1)
         print(f'Generated filler block {new_blocks[0]}')
 
     # generate a transaction with 2 unspent note commitments for user wallet
@@ -310,14 +322,21 @@ def main():
         "id": 0,
     }
 
+    response = requests.post(ZCASHD_URL, json=payload).json()
+
+    opid = response["result"]
+
+    wait_for_opid_and_report_result(opid,10)
+    
     # generate block
     new_blocks = generate_blocks(1)
 
+    time.sleep(1)
     # validate. 
 
     after_info = get_blockchain_info()
 
-    assert after_info["blocks"] == 302
+    assert after_info["blocks"] == 209
 
 def shield_coinbase(from_addr, to_addr, limit, policy):
     payload = {
@@ -469,24 +488,26 @@ def dump_block_range_to_file(file_path, range):
 
     file.close()
 
+## waits of the opid, reports result or timeouts otherwise
 def wait_for_opid_and_report_result(opid, timeout):
     payload = {
             "method": "z_getoperationstatus",
             "params": [
-                opid
+               [ opid ]
             ],
             "jsonrpc": "2.0",
             "id": 0,
         }
     response = requests.post(ZCASHD_URL, json=payload).json()
 
-    result = response["result"]
-
+    result = response["result"][0]
+    # TODO: handle timeout
     while timeout > 0 and result["status"] == "executing" or result["status"] == "queued":
+        print(f'waiting for opid {opid} time remaining {timeout}')
         time.sleep(1)
         timeout = timeout - 1
         response = requests.post(ZCASHD_URL, json=payload).json()
-        result = response["result"]
+        result = response["result"][0]
 
     return result
 
