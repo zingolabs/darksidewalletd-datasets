@@ -26,6 +26,8 @@ ZCASHD_URL = "http://pacu:pacu@127.0.0.1:8232"
 
 import requests
 import time
+import sys
+
 def get_new_account():
     payload = {
         "method": "z_getnewaccount",
@@ -108,6 +110,8 @@ def main():
     # mine the shielded coinbases
     print(f'generate 1 block {generate_blocks(1)}')
 
+    time.sleep(1)
+
     shielded_op_id = shield_coinbase(
         "*",
         miner_addresses[0],
@@ -151,6 +155,17 @@ def main():
 
     wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
     
+    shielded_op_id = shield_coinbase(
+        "*",
+        miner_addresses[0],
+        1, # one coinbase
+        "AllowRevealedSenders"
+    )
+    
+    print(f'shielded coinbase {shielded_op_id}')
+
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
+
     # mine the shielded coinbases
     print(f'generate 1 block {generate_blocks(1)}')
 
@@ -265,7 +280,8 @@ def main():
 
     opid = response["result"]
 
-    wait_for_opid_and_report_result(opid, 10)
+    # this needs a bit more of time.
+    wait_for_opid_and_report_result(opid, 1000)
 
     assert len(opid) > 0
 
@@ -273,6 +289,8 @@ def main():
 
     # generate a block to 
     # start generating filler blocks
+    print(f'generate 1 block {generate_blocks(1)}')
+    time.sleep(1)
 
     print("start generating filler blocks")
 
@@ -326,7 +344,7 @@ def main():
 
     opid = response["result"]
 
-    wait_for_opid_and_report_result(opid,10)
+    wait_for_opid_and_report_result(opid, 15)
     
     # generate block
     new_blocks = generate_blocks(1)
@@ -336,7 +354,9 @@ def main():
 
     after_info = get_blockchain_info()
 
-    assert after_info["blocks"] == 209
+    assert after_info["blocks"] == 210
+
+    print(f'Generation of SFoE Finished! {after_info}')
 
 def shield_coinbase(from_addr, to_addr, limit, policy):
     payload = {
@@ -501,14 +521,17 @@ def wait_for_opid_and_report_result(opid, timeout):
     response = requests.post(ZCASHD_URL, json=payload).json()
 
     result = response["result"][0]
-    # TODO: handle timeout
-    while timeout > 0 and result["status"] == "executing" or result["status"] == "queued":
+
+    while timeout > 0 and (result["status"] == "executing" or result["status"] == "queued"):
         print(f'waiting for opid {opid} time remaining {timeout}')
         time.sleep(1)
         timeout = timeout - 1
         response = requests.post(ZCASHD_URL, json=payload).json()
         result = response["result"][0]
-
+    assert timeout >= 0 and (result["status"] == "success" or result["status"] == "failed")
+    if result["status"] == "failed":
+        print(f'opid: {opid} "{result["method"]}" failed with code {result["error"]["code"]} message: {result["error"]["message"]}')
+        sys.exit(-1)
     return result
 
 if __name__ == "__main__":
