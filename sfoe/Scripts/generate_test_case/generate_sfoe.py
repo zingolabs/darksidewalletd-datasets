@@ -179,7 +179,7 @@ def main():
     
     print(f'shielded coinbase {shielded_op_id}')
 
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 20)
     # mine the shielded coinbases
     print(f'generate 1 block {generate_blocks(1)}')
     time.sleep(1)
@@ -302,6 +302,8 @@ def main():
         filler_tx_1_opid = send_filler_transaction(from_address, FILLER_ADDRESSES[0])
         print(f'sent filler transaction 1 opid {filler_tx_1_opid}')
         wait_for_opid_and_report_result(filler_tx_1_opid, 10)
+
+        time.sleep(1)
 
         filler_tx_2_opid = send_filler_transaction(from_address, FILLER_ADDRESSES[1])
         print(f'sent filler transaction 2 opid {filler_tx_2_opid}')
