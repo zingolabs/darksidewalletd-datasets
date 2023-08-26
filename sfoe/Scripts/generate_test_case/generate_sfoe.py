@@ -27,6 +27,7 @@ ZCASHD_URL = "http://pacu:pacu@127.0.0.1:8232"
 import requests
 import time
 import sys
+import json
 
 def get_new_account():
     payload = {
@@ -195,8 +196,9 @@ def main():
     # generate some blocks so that the Tx breaking the balance are mined
     #print(f'Generated blocks: [ \n {generate_blocks(10)} \n]')
 
-
-    print(f'SFoE starting at height {get_blockchain_info()["estimatedheight"]}')
+    sfoe_start = get_blockchain_info()["estimatedheight"]
+    filler_block_count = FILLER_BLOCK_COUNT
+    print(f'SFoE starting at height {sfoe_start}')
     # first z_sendmany
     # 10 unspent commitments for User wallet
     # 2 filler outputs for filler wallet
@@ -355,10 +357,17 @@ def main():
     # validate. 
 
     after_info = get_blockchain_info()
+    sfoe_end = after_info["blocks"]
+    assert sfoe_end == 210
 
-    assert after_info["blocks"] == 210
+    test_description = {
+        "testStartHeight": sfoe_start,
+        "testEndHeight": sfoe_end,
+        "fillerBlockCount": filler_block_count
+    }
 
-    print(f'Generation of SFoE Finished! {after_info}')
+    print(f'Generation of SFoE Finished!')
+    print(f'{json.dumps(test_description)}')
 
 def shield_coinbase(from_addr, to_addr, limit, policy):
     payload = {
