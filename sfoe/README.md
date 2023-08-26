@@ -87,8 +87,7 @@ Note: the dataset should work on any other wallet (Ywallet, NH, Zashi) provided 
 Follow [this article on Free2z](https://free2z.cash/pacu/zpage/running-a-zcashd-regtest-node-with-docker)
 
 
-2. set up your folder paths
-
+2. set up your folder paths to export the test
 
 3. Run the generating scripts
 

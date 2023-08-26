@@ -15,3 +15,6 @@ Cargo.lock
 
 # VS code files
 .vscode
+
+# python 
+__pycache__

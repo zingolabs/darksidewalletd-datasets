@@ -66,7 +66,7 @@ def get_blockchain_info():
 
     return requests.post(ZCASHD_URL, json=payload).json()["result"]
 
-def main():
+def generate_test_case():
     # get blockchain info
    
     info = get_blockchain_info()
@@ -369,6 +369,8 @@ def main():
     print(f'Generation of SFoE Finished!')
     print(f'{json.dumps(test_description)}')
 
+    return test_description
+
 def shield_coinbase(from_addr, to_addr, limit, policy):
     payload = {
         "method": "z_shieldcoinbase",
@@ -545,5 +547,10 @@ def wait_for_opid_and_report_result(opid, timeout):
         sys.exit(-1)
     return result
 
+def main():
+    generate_test_case()
+    
 if __name__ == "__main__":
     main()
+
+
