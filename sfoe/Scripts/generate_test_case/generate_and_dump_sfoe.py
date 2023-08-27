@@ -28,7 +28,7 @@ def main(parser):
     test_block_range = range(test_start_height, test_end_height + 1)
 
     # you need the tree state to the block prior to the height of the note you want to spend
-    tree_state_block_range = range(test_start_height - 1, test_start_height + 1)
+    tree_state_block_range = range(test_start_height - 1, test_end_height + 1)
 
     transactions_folder = os.path.join(dest_folder, "transactions")
     os.mkdir(transactions_folder)
