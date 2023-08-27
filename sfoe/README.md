@@ -82,17 +82,51 @@ Note: the dataset should work on any other wallet (Ywallet, NH, Zashi) provided 
 
 ### Generating the test
 
-1. Running Zcashd regtest on docker
+#### 1. Running Zcashd regtest on docker
 
 Follow [this article on Free2z](https://free2z.cash/pacu/zpage/running-a-zcashd-regtest-node-with-docker)
 
 
-2. set up your folder paths to export the test
+#### 2. set up your folder paths to export the test
 
-3. Run the generating scripts
+This entails setting up your persistent store for the docker instance,
+and also the destination folder for the generating scripts
+
+#### 3. Launch zcashd instance in regtest (instructions on tutorial)
+It is possible that you can use the docker desktop GUI as well to do
+this step.
+
+#### 4. Run generate and dump script.
+
+**Example:**
+
+Your `rpcuser` is `usr` and your `rpcpassword` is `pwd`
+
+Your zcashd dockerized instance is mapped to port `8232`
+
+Run the script
 
 
-### Topology if the SFoE test
+`sfoe/Scripts/generate_test_case/generate_and
+_dump_sfoe.py http://usr:pwd@127.0.0.1:8232 $HOME/tmp/SFoE`
+
+#### 5. [Optional] avoid recreating the whole test in zcashd when re-running the script
+
+The script can be told to skip the generation of the Regtest blockchain, and go
+straight to the "dumping" part. This is done by specifying two arguments:
+
+`--skip-gen START_HEIGHT` tells the script to start dumping the test info from 
+the given height
+
+`--end-height END_HEIGHT` tells the script to dump *up to* `END_HEIGHT`.
+
+Running the script without generating the blocks in regtest:
+
+`sfoe/Scripts/generate_test_case/generate_and
+_dump_sfoe.py http://usr:pwd@127.0.0.1:8232 $HOME/tmp/SFoE --skip-gen 206 --end-heigh
+t 210`
+
+#### Topology if the SFoE test
 
 SFoE departs from 100 "matured" coinbases at block 200. 
 The test is composed of some key elements:
