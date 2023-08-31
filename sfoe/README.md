@@ -126,6 +126,19 @@ Running the script without generating the blocks in regtest:
 _dump_sfoe.py http://usr:pwd@127.0.0.1:8232 $HOME/tmp/SFoE --skip-gen 206 --end-heigh
 t 210`
 
+
+#### 6. Loading Into Darkside Lightwalletd
+
+1 - run dlwd
+
+`./lightwalletd --log-file /dev/stdout --darkside-very-insecure  --darkside-timeout 1000 --gen-cert-very-insecure --data-dir . --no-tls-very-insecure`
+
+2 - run a local python server at `sfoe/dataset`
+
+`python3 -m http.server 8000`
+
+3 - run the loading script `sfoe/dataset/set_up_full_test.sh`
+
 #### Topology if the SFoE test
 
 SFoE departs from 100 "matured" coinbases at block 200. 
