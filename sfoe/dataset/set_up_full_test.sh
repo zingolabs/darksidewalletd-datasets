@@ -5,13 +5,20 @@ echo "grpcurl -plaintext -d '{ "saplingActivation" : 206, "branchID" : "2bb40e60
 # reset lightwalletd
 grpcurl -plaintext -d '{ "saplingActivation" : 206, "branchID" : "2bb40e60", "chainName" : "regtest"}' localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/Reset
 
-for i in {205..206}
+for i in {205..209}
 do
     echo "grpcurl -plaintext -d @ localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/AddTreeState < treestates/$i.json"
 
     grpcurl -plaintext -d @ localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/AddTreeState < treestates/$i.json
 done
 
+for i in {210..1206}
+do
+    # fake a tree
+    grpcurl -plaintext -d "{ \"network\": \"regtest\", \"height\": \"$i\", \"hash\": \"0a1cd1eb4a5cbaa77c148cd25f328037e35361ea238b388e589c78b0e128851e\",  \"time\": 1693145091,  \"saplingTree\": \"000000\",  \"orchardTree\": \"0117fbeab74845d1bd29a48188b01899eec59fb39c6f62bd878c5f776cb622b02a001f000001bcd2386e5fa6c64795384896775ee135493fce28e5d39aae7b49ff78cb303301014a6597ad0ed0853900685983df257435fc0488e300eb68120135f1610d0f0721000000000000000000000000000000000000000000000000000000\"}" localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/AddTreeState
+done
+
+grpcurl -plaintext -d "{ \"network\": \"regtest\", \"height\": \"1207\", \"hash\": \"0a1cd1eb4a5cbaa77c148cd25f328037e35361ea238b388e589c78b0e128851e\",  \"time\": 1693145091,  \"saplingTree\": \"000000\",  \"orchardTree\": \"0199aa1a2d9d6904a30373bfef0704457a27dad086ad3fe4f4007ec5c2a80c39200117fbeab74845d1bd29a48188b01899eec59fb39c6f62bd878c5f776cb622b02a1f0001da3de1cab4d98239aecefed49397ba5a91c82fcc2138471d3186c05a85073e0a00000101baee5e0a7902397807a67f57ef4969da91b4229910458288ace26db52deb0e0000000000000000000000000000000000000000000000000000\"}" localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/AddTreeState
 
 grpcurl -plaintext -d '{ "url" : "http://localhost:8000/block_206.txt"  }' localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/StageBlocks
 grpcurl -plaintext -d '{ "height" : 206 }' localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/ApplyStaged
