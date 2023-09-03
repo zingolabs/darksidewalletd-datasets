@@ -139,6 +139,59 @@ t 210`
 
 3 - run the loading script `sfoe/dataset/set_up_full_test.sh`
 
+
+#### 7. Starting a Wallet that loads this test (ZingoLabs)
+
+The test is comprised of three parts:
+1. A local http server to speed loading up the data into darksidewalletd
+2. A local darksidewalletd instance
+3. A subject wallet that we are going to test.
+
+Once you have completed the previous step the only thing left you need to do
+is to start a wallet with the "user wallet", which is the wallet receiving the 
+funds at the beginning and the end of the test.
+
+
+Your `--data-dir` can be where it's suitable for you.
+
+`--server` will point to the local lightwalletd instance. 
+
+
+```
+./target/release/zingo-cli \
+--seed "wrong when collect sponsor always simple control color exercise dad merry diet script attract public lucky pen pistol depend deposit salad room similar hour" \
+--birthday 206 \
+--server localhost:9067 \
+--data-dir $HOME/tmp/zingo-sfoe \
+--darkside-test \
+--regtest
+```
+
+
+#### Expected Results of the test
+When you scan, the wallet should return
+
+````JSON
+{
+  "result": "success"
+}
+````
+
+The expected balance should be `orchard_balance` of `120000000` zatoshi
+````JSON
+{
+  "sapling_balance": 0,
+  "verified_sapling_balance": 0,
+  "spendable_sapling_balance": 0,
+  "unverified_sapling_balance": 0,
+  "orchard_balance": 120000000,
+  "verified_orchard_balance": 120000000,
+  "spendable_orchard_balance": 120000000,
+  "unverified_orchard_balance": 0,
+  "transparent_balance": 0
+}
+````
+
 #### Topology if the SFoE test
 
 SFoE departs from 100 "matured" coinbases at block 200. 
