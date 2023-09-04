@@ -17,7 +17,7 @@ FILLER_ADDRESSES = [
     "uregtest1z8s5szuww2cnze042e0re2ez8l3d04zvkp7kslxwdha6tp644srd4nh0xlp8a05avzduc6uavqkxv79x53c60hrc0qsgeza3age2g3qualullukd4s0lsn6mtfup4z8jz6xdz2c05zakhafc7pmw0dwugwu9ljevzgyc3mfwxg9slr87k8l7cq075gl3fgxpr85uuvxhxydrskp2303"
 ]
 
-FILLER_BLOCK_COUNT = 2
+FILLER_BLOCK_COUNT = 1000
 # Config stuff
 RPCUSER = "pacu"
 RPCPASSWORD = "pacu"
@@ -89,103 +89,32 @@ def generate_test_case():
 
     miner_addresses = get_addresses_for_account(100, account)
 
-    print("generating First 200 blocks")
+    print("generating First 100 blocks")
 
-    blockhashes = generate_blocks(200)
+    blockhashes = generate_blocks(101)
 
     assert len(blockhashes) > 0
     
     print(f'Generated block hashes {blockhashes}')
 
-    # shield the mature coinbases
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        1, # one coinbase
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
+    time.sleep(2)
+    # shield the mature coinbases in 100 subsequent blocks
+    for i in range(100, 201):
+        shielded_op_id = shield_coinbase(
+            "*",
+            miner_addresses[0],
+            1, # one coinbase
+            "AllowRevealedSenders"
+        )
+        
+        print(f'shielded coinbase {shielded_op_id}')
 
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
-    # mine the shielded coinbases
-    print(f'generate 1 block {generate_blocks(1)}')
+        wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
 
-    time.sleep(1)
+        # mine the shielded coinbases
+        print(f'generate 1 block {generate_blocks(1)}')
 
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        1, # one coinbase
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
-
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
-
-    # mine the shielded coinbases
-    print(f'generate 1 block {generate_blocks(1)}')
-
-    time.sleep(1)
-
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        1, # one coinbase
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
-
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
-    
-    # mine the shielded coinbases
-    print(f'generate 1 block {generate_blocks(1)}')
-
-    time.sleep(1)
-
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        1, # one coinbase
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
-
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
-    
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        1, # one coinbase
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
-
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
-
-    # mine the shielded coinbases
-    print(f'generate 1 block {generate_blocks(1)}')
-
-    time.sleep(1)
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        0, # all coinbases
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
-
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 20)
-    # mine the shielded coinbases
-    print(f'generate 1 block {generate_blocks(1)}')
-    time.sleep(1)
-    print(f'generate 1 block {generate_blocks(1)}')
-    time.sleep(1)
+        time.sleep(1)
 
     # break the balance of miner wallet in smaller notes
     #print("break the balance of miner wallet in smaller notes")
@@ -358,7 +287,7 @@ def generate_test_case():
 
     after_info = get_blockchain_info()
     sfoe_end = after_info["blocks"]
-    assert sfoe_end == 210
+    assert sfoe_end == 1204
 
     test_description = {
         "testStartHeight": sfoe_start,
