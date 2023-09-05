@@ -19,10 +19,10 @@ FILLER_ADDRESSES = [
 
 FILLER_BLOCK_COUNT = 1000
 # Config stuff
-RPCUSER = "pacu"
-RPCPASSWORD = "pacu"
+RPCUSER = "user"
+RPCPASSWORD = "password"
 POLICY = "FullPrivacy"
-ZCASHD_URL = "http://pacu:pacu@127.0.0.1:8232"
+ZCASHD_URL = f'http://{RPCUSER}:{RPCPASSWORD}@127.0.0.1:8232'
 
 import requests
 import time

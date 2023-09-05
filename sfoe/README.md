@@ -5,7 +5,7 @@ A user gets onboarded into ZEC at a given time (block 1)  and creates a wallet.
 User forgets about it until a later time it realized it can accept a Zcash payment instead of fiat, so User intends to receive ZEC. 
 
 **Given that user has:**
--  10 unspent note commitments 
+- 10 unspent note commitments 
 - 100,000 blocks with two orchard actions each have passed from the onboarding moment
 
 And will receive 2 unspent note commitments at block 100,000.
@@ -64,16 +64,16 @@ UA:
 **Role:** gets sent all the transactions that will be filler outputs for the test.
 
 
-### Elements to be built:
+### Elements built:
 
-- A script that generates the scenario ✅
+- A script that generates the scenario 
   - constructs the generate to block to the 'miner wallet' 
   - funds the user wallet with 10 orchard commitments at block `testStartHeight` 
   - generates `fillerBlockCount` filler blocks to a different wallet that can't be decrypted by user wallet. 
   - funds the user wallet at block `testStartHeight + fillerBlockCount + 1`
-- Export the dataset from Regtest into darksidewalletd ✅
-  - Get Tree States from a block range ✅
-  - Get Transactions on every block of a given block range ✅
+- Export the dataset from Regtest into darksidewalletd 
+  - Get Tree States from a block range 
+  - Get Transactions on every block of a given block range
   - Dump a file with the generated SFoE Test
 - create a test case that exercises this test on zingo-lib
 
@@ -199,3 +199,15 @@ The test is composed of some key elements:
 - `testStartHeight`: this is the height at which SFoE concretely starts. This is the first block that contains a transaction for the "user wallet".
 - `fillerBlockCount` filler blocks: These are blocks that contain shielded ouputs that don't belong to the user wallet and that the wallet will have to handle anyway.
 - `testEndHeight` height.
+
+When running `generate_sfoe.py` the script will:
+1. Make sure that your Zcashd regtest ready on zero blocks
+2. Generate account 0 and a new address on you node (miner)
+3. Generate the first 100 blocks, to have a matured coinbase that you can shield.
+4. Shield the mature coinbases in 100 subsequent blocks
+5. Define SFoE starting at the corresponding height (around block 202)
+6. send the first z_sendmany with 10 unspent commitments for User wallet and 2 filler outputs for filler wallet
+7. start generating filler blocks (1000). Each fille block has 2 transactions + the coinbase. It takes around 10 seconds for a docker Zcashd to generate a Tx. 
+8. Generate a transaction with 2 unspent note commitments for user wallet (around block `start + filler_count`)
+9. Generate a block for that transaction.
+10. Wrap the test and inform the start, end and length of the test.
