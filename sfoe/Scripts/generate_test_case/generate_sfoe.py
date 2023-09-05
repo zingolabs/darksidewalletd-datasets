@@ -28,6 +28,7 @@ import requests
 import time
 import sys
 import json
+from enum import Enum
 
 def get_new_account():
     payload = {
@@ -89,7 +90,7 @@ def generate_test_case():
 
     miner_addresses = get_addresses_for_account(100, account)
 
-    print("generating First 100 blocks")
+    print("generating First 101 blocks")
 
     blockhashes = generate_blocks(101)
 
@@ -449,6 +450,74 @@ def dump_block_range_to_file(file_path, range):
         file.write("\n")
 
     file.close()
+
+class OpidStatus(Enum):
+    SUCCESS = 1,
+    PENDING = 2,
+    FAILURE = 3
+    
+    @staticmethod
+    def from_status(status):
+        if status == "queued" or status == "executing":
+            return OpidStatus.PENDING
+        if status == "failed":
+            return OpidStatus.FAILURE
+        if status == "success":
+            return OpidStatus.SUCCESS
+        return None
+
+
+def _any_pending_opid(opids):
+    for op in opids:
+        status = OpidStatus.from_status(op["status"])
+        
+        if status == OpidStatus.SUCCESS:
+            continue
+        if status == OpidStatus.PENDING:
+            return OpidStatus.PENDING
+        if status == OpidStatus.FAILURE:
+            return OpidStatus.FAILURE
+
+def _get_failed_opid(opids):
+    failed_opids = []
+    for op in opids:
+        if OpidStatus.from_status(op["status"]) == OpidStatus.FAILURE:
+            failed_opids.append(op)
+    return failed_opids
+
+## waits for a collection of opids, reports result or timeouts otherwise
+## use when there are operations that can be executed concurrently and 
+## waited altogether.
+## Notes: spend operations don't work properly, you could get duplicate nullifier errors
+def wait_for_opids_and_report_results(opids, timeout):
+    payload = {
+            "method": "z_getoperationstatus",
+            "params": [
+               opids
+            ],
+            "jsonrpc": "2.0",
+            "id": 0,
+        }
+    response = requests.post(ZCASHD_URL, json=payload).json()
+
+    results = response["result"]
+
+    while timeout > 0 and _any_pending_opid(results) == OpidStatus.PENDING:
+        print(f'waiting for opids time remaining {timeout}')
+        time.sleep(1)
+        timeout = timeout - 1
+        response = requests.post(ZCASHD_URL, json=payload).json()
+        results = response["result"]
+
+    status = _any_pending_opid(results)
+    assert timeout >= 0 and (status == OpidStatus.SUCCESS or status == OpidStatus.FAILURE)
+    if status == OpidStatus.FAILURE:
+        failed_opids = _get_failed_opid(opids)
+
+        print(f'opids failed: {failed_opids}')
+        sys.exit(-1)
+    return results
+
 
 ## waits of the opid, reports result or timeouts otherwise
 def wait_for_opid_and_report_result(opid, timeout):
