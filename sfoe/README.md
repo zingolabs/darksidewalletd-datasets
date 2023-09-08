@@ -90,6 +90,10 @@ The test is composed of some key elements:
 - `fillerBlockCount` filler blocks: These are blocks that contain shielded ouputs that don't belong to the user wallet and that the wallet will have to handle anyway.
 - `testEndHeight` height.
 
+### Generating base elements of SFoE
+
+Precondition: install [grpcurl](https://github.com/fullstorydev/grpcurl)
+
 When running `generate_sfoe.py` the script will:
 1. Make sure that your Zcashd regtest ready on zero blocks
 2. Generate account 0 and a new address on you node (miner)
@@ -210,8 +214,111 @@ Your `--data-dir` can be where it's suitable for you.
 --regtest
 ```
 
-### Approach B: Generating the needed materials on Regtest then run on darkside entirely
+### Approach B: Generating the needed test materials on Regtest then run on darkside entirely
+This is the recommended approach for running the SFoE. Following these steps actually will
+let you do the following:
+1. launch a local http server to server the test pre-baked elements
+2. generate a local 100K blocks dataset in a directory structure that `genblocks` needs
+3. run the lightwalletd `genblocks` tool to actually generate a SFoE_100K.txt file for darksidewalletd
+4. launch a local darksidewalletd server to set up the test case.
+5. run a script to set up the SFoE 100k block test for Zingo wallet
+6. launch the test in a zingo-cli wallet
 
+In this approach we will use pre-generated elements in the repo under the 
+`dataset` folder to load transaction into a directory structure that then 
+will be processed by the `genblocks` tool on lightwalled to create a file
+that contains all the needed blocks to sync. Additionally, TreeState info
+will have to be side-loaded on darksidewalletd for wallets to be able to
+sync (if they require tree states).
+
+Loading Into Darkside Lightwalletd
+
+#### 1. run a local python server at `sfoe/dataset`
+you can do this the way you see fit. The easiest is to use python
+itself
+
+`python3 -m http.server 8000`
+
+#### 2. generate a local 100K blocks dataset in a directory structure that `genblocks` needs
+
+In its current form the SFoE 100K blocks dataset takes 4 GB of disk space.
+Since it can be generated at any time, we don't consider handy to store this
+file anywhere. We can use the [synthetic blocks testcase generator](Scripts/generate_test_case/generate_synthetic_blocks_testcase.py) script
+to generate the blocks.txt file that needs to be loaded into darksidewalletd.
+The 
+
+
+**Running from Visual Studio code**
+
+````js
+{
+            "name": "Python: Generate Synthetic block SFoE Test",
+            "type": "python",
+            "request": "launch",
+            "program": "sfoe/Scripts/generate_test_case/generate_synthetic_blocks_testcase.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "darksidewalletd-datasets/sfoe/dataset/transactions", // path to the transactions on this dataset
+                "/tmp/workbench", // some directory
+                "204", // this is where the test actually starts on the pre-baked dataset
+                "1204", // this is where the test actually has the last transaction needed
+                "100000" // you can tweak this number to whatever you'd like
+            ]
+        }
+````
+
+**Running from command line**
+
+It's possible to generate synthetic blocks from the command line. how?
+Just by following the Help instructions:
+
+`python3.11 darksidewalletd-datasets/sfoe/Scripts/generate_test_case/generate_synthetic_blocks_testcase.py -h`
+
+```
+usage: generate_synthetic_blocks_testcase.py [-h]
+                                             transactions_folder workbench_path start_block
+                                             stop_block test_length
+
+Lay down the blocks in a structure that is suitable for darksidewalletd `genblocks`.
+
+positional arguments:
+  transactions_folder  Path of the folder where the tree state files will be written to.
+  workbench_path       Writable path for the blocks workbench folder to be placed at
+  start_block          Block Height to start from. This indicates the start of the first
+                       transaction of the folder you want to include
+  stop_block           Block Height to stop at. This indicates when the regtest SFoE test ends
+                       and it should grab the last transaction from.
+  test_length          the length of the test you would like to generate. Example: 10000
+
+options:
+  -h, --help           show this help message and exit
+```
+
+
+#### 3. run the lightwalletd `genblocks` tool 
+
+Run the lightwalletd `genblocks` tool to actually generate a SFoE_100K.txt 
+file for darksidewalletd. For that you should check the [Lightwalled docs repo](https://github.com/zcash/lightwalletd/blob/master/docs/darksidewalletd.md#generating-fake-block-sets)
+but we give you the quick start here. Spoiler: **You need to install GoLang**.
+
+`go run testtools/genblocks/main.go --start-height 204 --blocks-dir $HOME/tmp/workbench/sfoe_blocks  > SFoE_100K.txt`
+
+`--start-height 204` means that the generated dataset will use a `saplingActivation` height of 204
+
+`--blocks-dir` is the place where you stored the result of the previous step.
+
+#### 4. launch a local darksidewalletd server to set up the test case.
+You should actually refer to the lightwalletd documentation just in case it has
+new features or arguments that you need to pass on. But we'll give out a heads up.
+
+`./lightwalletd --log-file /dev/stdout --darkside-very-insecure  --darkside-timeout 1000 --gen-cert-very-insecure --data-dir . --no-tls-very-insecure`
+
+#### 5. run a script to set up the SFoE 100k block test for Zingo wallet
+
+The [dataset/set_up_full_synthetic_test.sh][def] script is used to load the
+100k SFoE dataset. It currently expects the SFoE_100K.txt file from step 3
+to be under the `dataset` directory of this repo. 
 
 ## Expected Results of the test
 When you scan, the wallet should return
@@ -236,3 +343,6 @@ The expected balance should be `orchard_balance` of `120000000` zatoshi
   "transparent_balance": 0
 }
 ````
+
+
+[def]: dataset/set_up_full_synthetic_test.sh

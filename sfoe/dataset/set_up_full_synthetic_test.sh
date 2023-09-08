@@ -26,17 +26,6 @@ echo "load 100204 blocks from regtest"
 
 grpcurl -plaintext -d '{ "url" : "http://localhost:8000/SFoE_100K.txt"  }' localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/StageBlocks
 
-# echo "create 98800 synthetic blocks from 1204 onwards" 
-# grpcurl -plaintext -d '{ "height" : 1204, "nonce" : 0, "count": 98800 }' localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/StageBlocksCreate
-
-# for i in {1204..100003}
-# do
-#     echo "Stage Filler Transactions at height $i"
-#     grpcurl -plaintext -d "{ \"height\" : $i, \"url\" : \"http://localhost:8000/transactions/400/2291eec04f559fe5ea995996c676d8c1ccd999f1aaf64a3d321fc00b220d4b0f\" }" localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/StageTransactions
-#     grpcurl -plaintext -d "{ \"height\" : $i, \"url\" : \"http://localhost:8000/transactions/400/c03cc9b01a7f0df7ecac96d62fd6e189ff4a98acaf9617a53e4ad15010cbe40b\" }" localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/StageTransactions
-#     grpcurl -plaintext -d "{ \"height\" : $i, \"url\" : \"http://localhost:8000/transactions/400/ec287eec2d3db38dcdd3056eeb9726e844e82ec7ee8f8737c043562b7e5c41a8\" }" localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/StageTransactions
-# done
-
 # grpcurl -plaintext -d '{ "height" : 100003, "url" : "http://localhost:8000/transactions/1204/9b034bb694fbc37f4158c31d563065de8d8c8d54647302b3b60a42c865c6ad94" }' localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/StageTransactions
 # grpcurl -plaintext -d '{ "height" : 100003, "url" : "http://localhost:8000/transactions/1204/546c17867f0593040b1d285f47230382d86eb5ce271b0ec1b35810d71ffcd958" }' localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/StageTransactions
 

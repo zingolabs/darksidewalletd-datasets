@@ -9,7 +9,7 @@ do
 done
 
 
-grpcurl -plaintext -d '{ "url" : "http://localhost:8000/sfoe_blocks.txt" }' localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/StageBlocks
+grpcurl -plaintext -d '{ "url" : "http://localhost:8000/SFoE_1K.txt" }' localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/StageBlocks
 
 grpcurl -plaintext -d '{ "height" : 1204 }' localhost:9067 cash.z.wallet.sdk.rpc.DarksideStreamer/ApplyStaged
 

@@ -68,7 +68,7 @@ def write_transactions_into_block_file_path(transactions_folder_path, i, block_f
     block_file.close()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Get tree states into darksidewalletd dataset format from running zcashd instance.')
+    parser = argparse.ArgumentParser(description='Lay down the blocks in a structure that is suitable for darksidewalletd `genblocks`.')
     parser.add_argument("transactions_folder", type=str, help="Path of the folder where the tree state files will be written to.")
     parser.add_argument("workbench_path", type=str, help="Writable path for the blocks workbench folder to be placed at")
     parser.add_argument("start_block", type=int, help="Block Height to start from. This indicates the start of the first transaction of the folder you want to include")
