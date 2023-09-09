@@ -28,6 +28,7 @@ import requests
 import time
 import sys
 import json
+import argparse
 from enum import Enum
 
 def get_new_account():
@@ -549,6 +550,14 @@ def main():
     generate_test_case()
     
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Generate the regtest blockchain for Second Flush of Enthusiasm (SFoE) test.')
+    parser.add_argument("zcashd_url", type=str, help="The authenticated RPC url for Zcashd. Example: http://rpcuser:rpcpassword@127.0.0.1:8232")
+    parser.add_argument("filler_block_count", type=str, help="Path of the file that the blocks will be written to.")
+    args = parser.parse_args()
+
+    FILLER_BLOCK_COUNT = args.filler_block_count
+    ZCASHD_URL = args.zcashd_url
+
     main()
 
 
