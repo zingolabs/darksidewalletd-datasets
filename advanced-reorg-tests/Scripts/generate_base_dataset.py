@@ -57,8 +57,8 @@ def generate_test_case(zcashd_url, block_count):
     print(f'Generated block hashes {blockhashes}')
 
     time.sleep(2)
-    # shield the mature coinbases in 20 subsequent blocks
-    for i in range(100, 121):
+    # shield the mature coinbases in 0 subsequent blocks
+    for i in range(100, 111):
         shielded_op_id = rpc_cli.shield_coinbase(
             "*",
             miner_addresses[0],
@@ -68,14 +68,14 @@ def generate_test_case(zcashd_url, block_count):
         
         print(f'shielded coinbase {shielded_op_id}')
 
-        rpc_cli.wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
+        rpc_cli.wait_for_opid_and_report_result(shielded_op_id["opid"], 11)
 
         # mine the shielded coinbases
         print(f'generate 1 block {rpc_cli.generate_blocks(1)}')
 
         time.sleep(1)
 
-    rpc_cli.generate_blocks(80)
+    rpc_cli.generate_blocks(90)
 
     start_height = rpc_cli.get_blockchain_info()["estimatedheight"]
 
@@ -83,47 +83,46 @@ def generate_test_case(zcashd_url, block_count):
         print(f'Test block {x + 1}')
 
         from_address = miner_addresses[0]
-        # generate a transaction for filler wallet
+        # generate a outputs for filler wallet
+        
         filler_0_recipient = recipient(address=FILLER_ADDRESSES[0], amount=0.0001)
-
-        filler_tx_1_opid = rpc_cli.zend_many(from_address=from_address, recipients=[filler_0_recipient],min_conf=1, policy="FullPrivacy")
-        print(f'sent filler transaction 1 opid {filler_tx_1_opid}')
-        result = rpc_cli.wait_for_opid_and_report_result(filler_tx_1_opid, 10)
-        filler_transactions.append(result["result"]["txid"])
-
-        time.sleep(1)
-
         filler_1_recipient = recipient(address=FILLER_ADDRESSES[1], amount=0.0001)
         
-        filler_tx_2_opid = rpc_cli.zend_many(from_address=from_address, recipients=[filler_1_recipient],min_conf=1, policy="FullPrivacy")
-        print(f'sent filler transaction 2 opid {filler_tx_2_opid}')
-        result = rpc_cli.wait_for_opid_and_report_result(filler_tx_2_opid, 10)
+        recipients = [filler_0_recipient, filler_1_recipient]
         
-        filler_transactions.append(result["result"]["txid"])
-
-        if x % 3:
-            user_recipient = recipient(USER_ADDRESSES[0], 1, f'Transaction {x % 3} to user wallet address 0')
-            user_tx = rpc_cli.zend_many(from_address=from_address, recipients=[user_recipient],min_conf=1, policy="FullPrivacy")
-            print(f'sent user transaction opid {user_tx}')
-            result = rpc_cli.wait_for_opid_and_report_result(user_tx, 10)
-            user_transactions.append(result["result"]["txid"])
+        # add an output for the user wallet every 3 blocks
+        if (x % 3) == 0:
+            recipients.append(recipient(USER_ADDRESSES[0], 1, f'Transaction {x % 3} to user wallet address 0'))
+        
         # generate block
+        user_tx = rpc_cli.zend_many(from_address=from_address, recipients=recipients,min_conf=1, policy="FullPrivacy")
+
+        result = rpc_cli.wait_for_opid_and_report_result(user_tx, 30)
+
         new_blocks = rpc_cli.generate_blocks(1)
 
         time.sleep(1)
-        print(f'Generated filler block {new_blocks[0]}')
+
+        if (x % 3) == 0:
+            user_transactions.append(result["result"]["txid"])
+            print(f'Generated user tx block {new_blocks[0]}')
+        else: 
+            filler_transactions.append(result["result"]["txid"])
+            print(f'Generated filler tx block {new_blocks[0]}')
     
-    end_height = rpc_cli.get_blockchain_info()["estimatedHeight"]
+    end_height = rpc_cli.get_blockchain_info()["estimatedheight"]
     test_description = {
         "testStartHeight": start_height,
         "testEndHeight": end_height,
         "blockCount": block_count,
         "userTransactions": user_transactions,
-        "fillerTransactions": user_transactions,
+        "fillerTransactions": filler_transactions,
     }
 
     print(f'Generation of Advanced ReOrg Base Dataset Finished!')
     print(f'{json.dumps(test_description)}')
+
+    return test_description
 
 def recipient(address: str, amount: float, memo: str = None):
     if memo == None:
