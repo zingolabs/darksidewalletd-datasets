@@ -46,6 +46,29 @@ class ZcashRPCClient:
         result = requests.post(self.zcashd_url, json=payload).json()["result"]
         return result["address"]
     
+    def get_address_utxos(self, address: str):
+        payload = {
+            "method": "getaddressutxos",
+            "params": [address],
+            "jsonrpc": "2.0",
+            "id": 0,
+        }
+
+        return requests.post(self.zcashd_url, json=payload).json()["result"]
+    
+    def get_addresses_utxos(self, addresses: list, chain_info: bool):
+        payload = {
+            "method": "getaddressutxos",
+            "params":[ {
+                "addresses": [addresses],
+                "chainInfo": chain_info
+            }],
+            "jsonrpc": "2.0",
+            "id": 0,
+        }
+
+        return requests.post(self.zcashd_url, json=payload).json()["result"]
+    
     def get_addresses_for_account(self, addresses_count, account):
         addresses = []
         for i in range(0,addresses_count):
