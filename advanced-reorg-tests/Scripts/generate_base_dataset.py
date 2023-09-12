@@ -16,13 +16,43 @@ USER_ADDRESSES = [
     "uregtest1f8qps9vl96wdgxh6650qlemmcppye93k42czjfhg8u7xea2vs49us0mzj7g8p925msg9xrmpf3pfgd36fjfvcpy2gwkm4uh328wl3lw62qgtyxzxg4jwhhs23n0wnkz7cgfghmmhd9d7v0sc7t7n6yxgruxqrpuk0ytr77yshzy2esu3plgzu4pqduexz0zqahfe7qpqk08gqksvurq"
 ]
 
+USER_TRANSPARENT_RECEIVER = "tmJ1YwD2UUdE3nX9HpoT3zUArp1csZiwQ4e"
+USER_SAPLING_RECEIVER = "zregtestsapling1v3ukj7y3nptuq4tw8f5m763f4tu8pqxqm654aztt6df7fdkvhsxe4ruf5h44nc2ugznd7frfy6q"
+
+# User Wallet will receive an orchard note every n blocks
+USER_WALLET_ORCHARD_CADENCE = 3
+
+RECEIVE_TRANSPARENT_AT_HEIGHTS = [205, 230, 250]
+
+RECEIVE_SAPLING_AT_HEIGHTS = [206, 235, 270]
+
 
 FILLER_ADDRESSES = [
     "uregtest1fl28qdx08zgweef5ve4usg3u2fan5cgth7rnc77wkq5rm8az8rluct727p58vfm64r5zkj90aqmd9rlatqnalkh0zrmw4sy6sgaex3gnux3ahkq3lr542nlags0l2ax257clhdwkqcps2pjxnmawgzqdfpeuqtch889ml9dfmqeq0zapkgw86hzs5sfj3s3vgnt477a7x25c7yjr62j",
     "uregtest1z8s5szuww2cnze042e0re2ez8l3d04zvkp7kslxwdha6tp644srd4nh0xlp8a05avzduc6uavqkxv79x53c60hrc0qsgeza3age2g3qualullukd4s0lsn6mtfup4z8jz6xdz2c05zakhafc7pmw0dwugwu9ljevzgyc3mfwxg9slr87k8l7cq075gl3fgxpr85uuvxhxydrskp2303"
 ]
 
+def should_send_sapling(height):
+    return height in RECEIVE_SAPLING_AT_HEIGHTS
 
+def should_send_transparent(height):
+    return height in RECEIVE_TRANSPARENT_AT_HEIGHTS
+
+def is_user_transaction(index, start_height):
+    height = start_height + index
+    return (index % USER_WALLET_ORCHARD_CADENCE) == 0 or should_send_sapling(height) or should_send_transparent(height)
+
+def which_privacy_for_index(index, start_height):
+    height = start_height + index
+    privacy = "FullPrivacy"
+
+    if should_send_sapling(height):
+        privacy = "AllowRevealedAmounts"
+
+    if should_send_transparent(height):
+        privacy = "NoPrivacy"
+    
+    return privacy
 def generate_test_case(zcashd_url, block_count):
     rpc_cli = ZcashRPCClient(zcashd_url)
     # get blockchain info
@@ -91,11 +121,19 @@ def generate_test_case(zcashd_url, block_count):
         recipients = [filler_0_recipient, filler_1_recipient]
         
         # add an output for the user wallet every 3 blocks
-        if (x % 3) == 0:
+        if (x % USER_WALLET_ORCHARD_CADENCE) == 0:
             recipients.append(recipient(USER_ADDRESSES[0], 1, f'Transaction {x % 3} to user wallet address 0'))
         
+        if should_send_sapling(x + start_height):
+            recipients.append(recipient(USER_SAPLING_RECEIVER, 0.01, f'Sapling funds to user wallet address 0'))
+        
+        if should_send_transparent(x + start_height):
+            recipients.append(recipient(USER_TRANSPARENT_RECEIVER, 0.1))
+        
+        privacy = which_privacy_for_index(x, start_height)
+
         # generate block
-        user_tx = rpc_cli.zend_many(from_address=from_address, recipients=recipients,min_conf=1, policy="FullPrivacy")
+        user_tx = rpc_cli.zend_many(from_address=from_address, recipients=recipients,min_conf=1, policy=privacy)
 
         result = rpc_cli.wait_for_opid_and_report_result(user_tx, 30)
 
@@ -103,12 +141,13 @@ def generate_test_case(zcashd_url, block_count):
 
         time.sleep(1)
 
-        if (x % 3) == 0:
+        if is_user_transaction(x, start_height):
             user_transactions.append(result["result"]["txid"])
             print(f'Generated user tx block {new_blocks[0]}')
         else: 
             filler_transactions.append(result["result"]["txid"])
             print(f'Generated filler tx block {new_blocks[0]}')
+        
     
     end_height = rpc_cli.get_blockchain_info()["estimatedheight"]
     test_description = {
