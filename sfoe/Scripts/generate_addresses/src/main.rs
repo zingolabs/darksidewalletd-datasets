@@ -3,7 +3,6 @@ use std::error::Error;
 use zingoconfig::ZingoConfig;
 use zingoconfig::ChainType;
 use zingolib::lightclient::LightClient;
-
 use clap::Parser;
 
 #[derive(Parser,Default,Debug)]
@@ -15,6 +14,9 @@ struct Arguments {
     seed_phrase: String,
     /// The number of unified addresses we want to derive from account 0 of this seed.
     address_count: usize,
+    #[clap(forbid_empty_values = true, validator = validate_receiver_type)]
+    /// The receiver types on the addresses. Valid types: "t", "z", "o", "ot", "zo", "tz", "zo"
+    receiver_type: String,
     #[clap(long)]
     verbose: bool,
 }
@@ -32,11 +34,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     
     let mnemonic = zingolib::wallet::WalletBase::MnemonicPhrase(String::from_str(&args.seed_phrase).unwrap());
     let client = LightClient::create_unconnected(&config, mnemonic, 1).unwrap();
+    let receiver_type = args.receiver_type;
 
     for _ in 0..(args.address_count - 1) {
-        let _ = client.do_new_address("ozt").await.unwrap();
+        let _ = client.do_new_address(&receiver_type).await.unwrap();
     }
-
 
     if args.verbose {
         let addresses = client.do_addresses().await;
@@ -58,5 +60,17 @@ fn validate_seed_phrase_arg(name: &str) -> Result<(), String> {
         ))
     } else {
         Ok(())
+    }
+}
+
+fn validate_receiver_type(name: &str) -> Result<(), String> {
+    let valid_types =  ["z", "o", "ot", "zo", "tz", "zo"];
+    if valid_types.contains(&name) {
+        Ok(())
+    } else {
+        Err(String::from(
+                format!("'{}' is not an accepted receiver type. use {:?} instead", name, valid_types)           
+            )
+        )
     }
 }
