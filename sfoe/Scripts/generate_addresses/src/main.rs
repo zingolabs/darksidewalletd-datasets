@@ -64,7 +64,7 @@ fn validate_seed_phrase_arg(name: &str) -> Result<(), String> {
 }
 
 fn validate_receiver_type(name: &str) -> Result<(), String> {
-    let valid_types =  ["z", "o", "ot", "zo", "tz", "zo"];
+    let valid_types =  ["z", "o", "ot", "to", "zo","oz", "tz","zt", "zto", "zot", "tzo","toz", "otz", "ozt", "tzo"];
     if valid_types.contains(&name) {
         Ok(())
     } else {
