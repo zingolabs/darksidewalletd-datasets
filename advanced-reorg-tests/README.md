@@ -304,7 +304,7 @@ pre-condition: know balances before tx at received_Tx_height arrives
 3. sync up to received_Tx_height
    * a. verify that balance is previous balance + tx amount
 4. get that transaction hex encoded data
-5. stage 5 empty blocks w/heights received_Tx_height to received_Tx_height + 3
+5. stage 3 empty blocks w/heights received_Tx_height to received_Tx_height + 3
 6. stage tx at received_Tx_height + 3
     * a. applyheight(received_Tx_height + 1)
 7. sync to received_Tx_height + 1
