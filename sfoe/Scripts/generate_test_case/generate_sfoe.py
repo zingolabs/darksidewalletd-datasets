@@ -17,7 +17,7 @@ FILLER_ADDRESSES = [
     "uregtest1z8s5szuww2cnze042e0re2ez8l3d04zvkp7kslxwdha6tp644srd4nh0xlp8a05avzduc6uavqkxv79x53c60hrc0qsgeza3age2g3qualullukd4s0lsn6mtfup4z8jz6xdz2c05zakhafc7pmw0dwugwu9ljevzgyc3mfwxg9slr87k8l7cq075gl3fgxpr85uuvxhxydrskp2303"
 ]
 
-FILLER_BLOCK_COUNT = 100
+FILLER_BLOCK_COUNT = 2
 # Config stuff
 RPCUSER = "pacu"
 RPCPASSWORD = "pacu"
@@ -26,6 +26,9 @@ ZCASHD_URL = "http://pacu:pacu@127.0.0.1:8232"
 
 import requests
 import time
+import sys
+import json
+
 def get_new_account():
     payload = {
         "method": "z_getnewaccount",
@@ -63,7 +66,7 @@ def get_blockchain_info():
 
     return requests.post(ZCASHD_URL, json=payload).json()["result"]
 
-def main():
+def generate_test_case():
     # get blockchain info
    
     info = get_blockchain_info()
@@ -94,7 +97,80 @@ def main():
     
     print(f'Generated block hashes {blockhashes}')
 
-    # shield the first 100 mature coinbases
+    # shield the mature coinbases
+    shielded_op_id = shield_coinbase(
+        "*",
+        miner_addresses[0],
+        1, # one coinbase
+        "AllowRevealedSenders"
+    )
+    
+    print(f'shielded coinbase {shielded_op_id}')
+
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
+    # mine the shielded coinbases
+    print(f'generate 1 block {generate_blocks(1)}')
+
+    time.sleep(1)
+
+    shielded_op_id = shield_coinbase(
+        "*",
+        miner_addresses[0],
+        1, # one coinbase
+        "AllowRevealedSenders"
+    )
+    
+    print(f'shielded coinbase {shielded_op_id}')
+
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
+
+    # mine the shielded coinbases
+    print(f'generate 1 block {generate_blocks(1)}')
+
+    time.sleep(1)
+
+    shielded_op_id = shield_coinbase(
+        "*",
+        miner_addresses[0],
+        1, # one coinbase
+        "AllowRevealedSenders"
+    )
+    
+    print(f'shielded coinbase {shielded_op_id}')
+
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
+    
+    # mine the shielded coinbases
+    print(f'generate 1 block {generate_blocks(1)}')
+
+    time.sleep(1)
+
+    shielded_op_id = shield_coinbase(
+        "*",
+        miner_addresses[0],
+        1, # one coinbase
+        "AllowRevealedSenders"
+    )
+    
+    print(f'shielded coinbase {shielded_op_id}')
+
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
+    
+    shielded_op_id = shield_coinbase(
+        "*",
+        miner_addresses[0],
+        1, # one coinbase
+        "AllowRevealedSenders"
+    )
+    
+    print(f'shielded coinbase {shielded_op_id}')
+
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
+
+    # mine the shielded coinbases
+    print(f'generate 1 block {generate_blocks(1)}')
+
+    time.sleep(1)
     shielded_op_id = shield_coinbase(
         "*",
         miner_addresses[0],
@@ -104,7 +180,7 @@ def main():
     
     print(f'shielded coinbase {shielded_op_id}')
 
-    time.sleep(10)
+    wait_for_opid_and_report_result(shielded_op_id["opid"], 20)
     # mine the shielded coinbases
     print(f'generate 1 block {generate_blocks(1)}')
     time.sleep(1)
@@ -112,16 +188,17 @@ def main():
     time.sleep(1)
 
     # break the balance of miner wallet in smaller notes
-    print("break the balance of miner wallet in smaller notes")
-    op_ids = break_shielded_balance_into(addresses=miner_addresses, fractioned_value=0.1,  account=account, rounds=10)
+    #print("break the balance of miner wallet in smaller notes")
+    #op_ids = break_shielded_balance_into(addresses=miner_addresses, fractioned_value=0.1,  account=account, rounds=10)
 
-    print(f'value broken into op-ids \n {op_ids}')
+    #print(f'value broken into op-ids \n {op_ids}')
 
     # generate some blocks so that the Tx breaking the balance are mined
-    print(f'Generated blocks: [ \n {generate_blocks(10)} \n]')
+    #print(f'Generated blocks: [ \n {generate_blocks(10)} \n]')
 
-
-    print(f'SFoE starting at height {get_blockchain_info()["estimatedheight"]}')
+    sfoe_start = get_blockchain_info()["estimatedheight"]
+    filler_block_count = FILLER_BLOCK_COUNT
+    print(f'SFoE starting at height {sfoe_start}')
     # first z_sendmany
     # 10 unspent commitments for User wallet
     # 2 filler outputs for filler wallet
@@ -205,12 +282,17 @@ def main():
 
     opid = response["result"]
 
+    # this needs a bit more of time.
+    wait_for_opid_and_report_result(opid, 1000)
+
     assert len(opid) > 0
 
     print(f'Sent Txid: {opid}')
 
     # generate a block to 
     # start generating filler blocks
+    print(f'generate 1 block {generate_blocks(1)}')
+    time.sleep(1)
 
     print("start generating filler blocks")
 
@@ -219,15 +301,20 @@ def main():
 
         from_address = miner_addresses[x % len(miner_addresses)]
         # generate a transaction for filler wallet
-        filler_tx_1 = send_filler_transaction(from_address, FILLER_ADDRESSES[0])
-        print(f'sent filler transaction 1 txid {filler_tx_1}')
+        filler_tx_1_opid = send_filler_transaction(from_address, FILLER_ADDRESSES[0])
+        print(f'sent filler transaction 1 opid {filler_tx_1_opid}')
+        wait_for_opid_and_report_result(filler_tx_1_opid, 10)
 
-        filler_tx_2 = send_filler_transaction(from_address, FILLER_ADDRESSES[1])
-        print(f'sent filler transaction 2 txid {filler_tx_2}')
+        time.sleep(1)
+
+        filler_tx_2_opid = send_filler_transaction(from_address, FILLER_ADDRESSES[1])
+        print(f'sent filler transaction 2 opid {filler_tx_2_opid}')
+        wait_for_opid_and_report_result(filler_tx_2_opid, 10)
         
         # generate block
         new_blocks = generate_blocks(1)
 
+        time.sleep(1)
         print(f'Generated filler block {new_blocks[0]}')
 
     # generate a transaction with 2 unspent note commitments for user wallet
@@ -257,14 +344,32 @@ def main():
         "id": 0,
     }
 
+    response = requests.post(ZCASHD_URL, json=payload).json()
+
+    opid = response["result"]
+
+    wait_for_opid_and_report_result(opid, 15)
+    
     # generate block
     new_blocks = generate_blocks(1)
 
+    time.sleep(1)
     # validate. 
 
     after_info = get_blockchain_info()
+    sfoe_end = after_info["blocks"]
+    assert sfoe_end == 210
 
-    assert after_info["blocks"] == 302
+    test_description = {
+        "testStartHeight": sfoe_start,
+        "testEndHeight": sfoe_end,
+        "fillerBlockCount": filler_block_count
+    }
+
+    print(f'Generation of SFoE Finished!')
+    print(f'{json.dumps(test_description)}')
+
+    return test_description
 
 def shield_coinbase(from_addr, to_addr, limit, policy):
     payload = {
@@ -416,26 +521,36 @@ def dump_block_range_to_file(file_path, range):
 
     file.close()
 
+## waits of the opid, reports result or timeouts otherwise
 def wait_for_opid_and_report_result(opid, timeout):
     payload = {
             "method": "z_getoperationstatus",
             "params": [
-                opid
+               [ opid ]
             ],
             "jsonrpc": "2.0",
             "id": 0,
         }
     response = requests.post(ZCASHD_URL, json=payload).json()
 
-    result = response["result"]
+    result = response["result"][0]
 
-    while timeout > 0 and result["status"] == "executing" or result["status"] == "queued":
+    while timeout > 0 and (result["status"] == "executing" or result["status"] == "queued"):
+        print(f'waiting for opid {opid} time remaining {timeout}')
         time.sleep(1)
         timeout = timeout - 1
         response = requests.post(ZCASHD_URL, json=payload).json()
-        result = response["result"]
-
+        result = response["result"][0]
+    assert timeout >= 0 and (result["status"] == "success" or result["status"] == "failed")
+    if result["status"] == "failed":
+        print(f'opid: {opid} "{result["method"]}" failed with code {result["error"]["code"]} message: {result["error"]["message"]}')
+        sys.exit(-1)
     return result
 
+def main():
+    generate_test_case()
+    
 if __name__ == "__main__":
     main()
+
+

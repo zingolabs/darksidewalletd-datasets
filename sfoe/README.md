@@ -66,13 +66,136 @@ UA:
 
 ### Elements to be built:
 
-- A script that generates the scenario
-  - constructs the generate to block to the 'miner wallet'
-  - funds the user wallet with 10 orchard commitments at block 1
-  - generates filler blocks to a different wallet that can't be decrypted by user wallet.
-  - funds the user wallet at block 100K
-- Export the dataset from Regtest into darksidewalletd
+- A script that generates the scenario ✅
+  - constructs the generate to block to the 'miner wallet' 
+  - funds the user wallet with 10 orchard commitments at block `testStartHeight` 
+  - generates `fillerBlockCount` filler blocks to a different wallet that can't be decrypted by user wallet. 
+  - funds the user wallet at block `testStartHeight + fillerBlockCount + 1`
+- Export the dataset from Regtest into darksidewalletd ✅
+  - Get Tree States from a block range ✅
+  - Get Transactions on every block of a given block range ✅
+  - Dump a file with the generated SFoE Test
 - create a test case that exercises this test on zingo-lib
 
 Note: the dataset should work on any other wallet (Ywallet, NH, Zashi) provided its test cases for darksidewalletd are coded.
 
+
+### Generating the test
+
+#### 1. Running Zcashd regtest on docker
+
+Follow [this article on Free2z](https://free2z.cash/pacu/zpage/running-a-zcashd-regtest-node-with-docker)
+
+
+#### 2. set up your folder paths to export the test
+
+This entails setting up your persistent store for the docker instance,
+and also the destination folder for the generating scripts
+
+#### 3. Launch zcashd instance in regtest (instructions on tutorial)
+It is possible that you can use the docker desktop GUI as well to do
+this step.
+
+#### 4. Run generate and dump script.
+
+**Example:**
+
+Your `rpcuser` is `usr` and your `rpcpassword` is `pwd`
+
+Your zcashd dockerized instance is mapped to port `8232`
+
+Run the script
+
+
+`sfoe/Scripts/generate_test_case/generate_and
+_dump_sfoe.py http://usr:pwd@127.0.0.1:8232 $HOME/tmp/SFoE`
+
+#### 5. [Optional] avoid recreating the whole test in zcashd when re-running the script
+
+The script can be told to skip the generation of the Regtest blockchain, and go
+straight to the "dumping" part. This is done by specifying two arguments:
+
+`--skip-gen START_HEIGHT` tells the script to start dumping the test info from 
+the given height
+
+`--end-height END_HEIGHT` tells the script to dump *up to* `END_HEIGHT`.
+
+Running the script without generating the blocks in regtest:
+
+`sfoe/Scripts/generate_test_case/generate_and
+_dump_sfoe.py http://usr:pwd@127.0.0.1:8232 $HOME/tmp/SFoE --skip-gen 206 --end-heigh
+t 210`
+
+
+#### 6. Loading Into Darkside Lightwalletd
+
+1 - run dlwd
+
+`./lightwalletd --log-file /dev/stdout --darkside-very-insecure  --darkside-timeout 1000 --gen-cert-very-insecure --data-dir . --no-tls-very-insecure`
+
+2 - run a local python server at `sfoe/dataset`
+
+`python3 -m http.server 8000`
+
+3 - run the loading script `sfoe/dataset/set_up_full_test.sh`
+
+
+#### 7. Starting a Wallet that loads this test (ZingoLabs)
+
+The test is comprised of three parts:
+1. A local http server to speed loading up the data into darksidewalletd
+2. A local darksidewalletd instance
+3. A subject wallet that we are going to test.
+
+Once you have completed the previous step the only thing left you need to do
+is to start a wallet with the "user wallet", which is the wallet receiving the 
+funds at the beginning and the end of the test.
+
+
+Your `--data-dir` can be where it's suitable for you.
+
+`--server` will point to the local lightwalletd instance. 
+
+
+```
+./target/release/zingo-cli \
+--seed "wrong when collect sponsor always simple control color exercise dad merry diet script attract public lucky pen pistol depend deposit salad room similar hour" \
+--birthday 206 \
+--server localhost:9067 \
+--data-dir $HOME/tmp/zingo-sfoe \
+--darkside-test \
+--regtest
+```
+
+
+#### Expected Results of the test
+When you scan, the wallet should return
+
+````JSON
+{
+  "result": "success"
+}
+````
+
+The expected balance should be `orchard_balance` of `120000000` zatoshi
+````JSON
+{
+  "sapling_balance": 0,
+  "verified_sapling_balance": 0,
+  "spendable_sapling_balance": 0,
+  "unverified_sapling_balance": 0,
+  "orchard_balance": 120000000,
+  "verified_orchard_balance": 120000000,
+  "spendable_orchard_balance": 120000000,
+  "unverified_orchard_balance": 0,
+  "transparent_balance": 0
+}
+````
+
+#### Topology if the SFoE test
+
+SFoE departs from 100 "matured" coinbases at block 200. 
+The test is composed of some key elements:
+- `testStartHeight`: this is the height at which SFoE concretely starts. This is the first block that contains a transaction for the "user wallet".
+- `fillerBlockCount` filler blocks: These are blocks that contain shielded ouputs that don't belong to the user wallet and that the wallet will have to handle anyway.
+- `testEndHeight` height.

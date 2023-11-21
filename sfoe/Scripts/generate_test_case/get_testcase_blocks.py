@@ -30,4 +30,4 @@ if __name__ == "__main__":
     parser.add_argument("start_block", type=int, help="Block Height to start from.")
     parser.add_argument("stop_block", type=int, help="Blockheight to stop at.")
     args = parser.parse_args()
-    dump_block_range_to_file(args.zcashd_url,args.blocks_file,range(args.start_block,args.stop_block))
+    dump_block_range_to_file(args.zcashd_url,args.blocks_file,range(args.start_block, args.stop_block + 1))
