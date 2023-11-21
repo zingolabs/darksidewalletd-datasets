@@ -17,17 +17,18 @@ FILLER_ADDRESSES = [
     "uregtest1z8s5szuww2cnze042e0re2ez8l3d04zvkp7kslxwdha6tp644srd4nh0xlp8a05avzduc6uavqkxv79x53c60hrc0qsgeza3age2g3qualullukd4s0lsn6mtfup4z8jz6xdz2c05zakhafc7pmw0dwugwu9ljevzgyc3mfwxg9slr87k8l7cq075gl3fgxpr85uuvxhxydrskp2303"
 ]
 
-FILLER_BLOCK_COUNT = 2
+FILLER_BLOCK_COUNT = 1000
 # Config stuff
-RPCUSER = "pacu"
-RPCPASSWORD = "pacu"
+RPCUSER = "user"
+RPCPASSWORD = "password"
 POLICY = "FullPrivacy"
-ZCASHD_URL = "http://pacu:pacu@127.0.0.1:8232"
+ZCASHD_URL = f'http://{RPCUSER}:{RPCPASSWORD}@127.0.0.1:8232'
 
 import requests
 import time
 import sys
 import json
+from enum import Enum
 
 def get_new_account():
     payload = {
@@ -89,103 +90,32 @@ def generate_test_case():
 
     miner_addresses = get_addresses_for_account(100, account)
 
-    print("generating First 200 blocks")
+    print("generating First 101 blocks")
 
-    blockhashes = generate_blocks(200)
+    blockhashes = generate_blocks(101)
 
     assert len(blockhashes) > 0
     
     print(f'Generated block hashes {blockhashes}')
 
-    # shield the mature coinbases
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        1, # one coinbase
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
+    time.sleep(2)
+    # shield the mature coinbases in 100 subsequent blocks
+    for i in range(100, 201):
+        shielded_op_id = shield_coinbase(
+            "*",
+            miner_addresses[0],
+            1, # one coinbase
+            "AllowRevealedSenders"
+        )
+        
+        print(f'shielded coinbase {shielded_op_id}')
 
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
-    # mine the shielded coinbases
-    print(f'generate 1 block {generate_blocks(1)}')
+        wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
 
-    time.sleep(1)
+        # mine the shielded coinbases
+        print(f'generate 1 block {generate_blocks(1)}')
 
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        1, # one coinbase
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
-
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
-
-    # mine the shielded coinbases
-    print(f'generate 1 block {generate_blocks(1)}')
-
-    time.sleep(1)
-
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        1, # one coinbase
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
-
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
-    
-    # mine the shielded coinbases
-    print(f'generate 1 block {generate_blocks(1)}')
-
-    time.sleep(1)
-
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        1, # one coinbase
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
-
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
-    
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        1, # one coinbase
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
-
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 10)
-
-    # mine the shielded coinbases
-    print(f'generate 1 block {generate_blocks(1)}')
-
-    time.sleep(1)
-    shielded_op_id = shield_coinbase(
-        "*",
-        miner_addresses[0],
-        0, # all coinbases
-        "AllowRevealedSenders"
-    )
-    
-    print(f'shielded coinbase {shielded_op_id}')
-
-    wait_for_opid_and_report_result(shielded_op_id["opid"], 20)
-    # mine the shielded coinbases
-    print(f'generate 1 block {generate_blocks(1)}')
-    time.sleep(1)
-    print(f'generate 1 block {generate_blocks(1)}')
-    time.sleep(1)
+        time.sleep(1)
 
     # break the balance of miner wallet in smaller notes
     #print("break the balance of miner wallet in smaller notes")
@@ -358,7 +288,7 @@ def generate_test_case():
 
     after_info = get_blockchain_info()
     sfoe_end = after_info["blocks"]
-    assert sfoe_end == 210
+    assert sfoe_end == 1204
 
     test_description = {
         "testStartHeight": sfoe_start,
@@ -520,6 +450,74 @@ def dump_block_range_to_file(file_path, range):
         file.write("\n")
 
     file.close()
+
+class OpidStatus(Enum):
+    SUCCESS = 1,
+    PENDING = 2,
+    FAILURE = 3
+    
+    @staticmethod
+    def from_status(status):
+        if status == "queued" or status == "executing":
+            return OpidStatus.PENDING
+        if status == "failed":
+            return OpidStatus.FAILURE
+        if status == "success":
+            return OpidStatus.SUCCESS
+        return None
+
+
+def _any_pending_opid(opids):
+    for op in opids:
+        status = OpidStatus.from_status(op["status"])
+        
+        if status == OpidStatus.SUCCESS:
+            continue
+        if status == OpidStatus.PENDING:
+            return OpidStatus.PENDING
+        if status == OpidStatus.FAILURE:
+            return OpidStatus.FAILURE
+
+def _get_failed_opid(opids):
+    failed_opids = []
+    for op in opids:
+        if OpidStatus.from_status(op["status"]) == OpidStatus.FAILURE:
+            failed_opids.append(op)
+    return failed_opids
+
+## waits for a collection of opids, reports result or timeouts otherwise
+## use when there are operations that can be executed concurrently and 
+## waited altogether.
+## Notes: spend operations don't work properly, you could get duplicate nullifier errors
+def wait_for_opids_and_report_results(opids, timeout):
+    payload = {
+            "method": "z_getoperationstatus",
+            "params": [
+               opids
+            ],
+            "jsonrpc": "2.0",
+            "id": 0,
+        }
+    response = requests.post(ZCASHD_URL, json=payload).json()
+
+    results = response["result"]
+
+    while timeout > 0 and _any_pending_opid(results) == OpidStatus.PENDING:
+        print(f'waiting for opids time remaining {timeout}')
+        time.sleep(1)
+        timeout = timeout - 1
+        response = requests.post(ZCASHD_URL, json=payload).json()
+        results = response["result"]
+
+    status = _any_pending_opid(results)
+    assert timeout >= 0 and (status == OpidStatus.SUCCESS or status == OpidStatus.FAILURE)
+    if status == OpidStatus.FAILURE:
+        failed_opids = _get_failed_opid(opids)
+
+        print(f'opids failed: {failed_opids}')
+        sys.exit(-1)
+    return results
+
 
 ## waits of the opid, reports result or timeouts otherwise
 def wait_for_opid_and_report_result(opid, timeout):

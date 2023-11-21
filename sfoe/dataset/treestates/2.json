@@ -1,0 +1,8 @@
+{
+    "network": "regtest",
+    "height": 2,
+    "hash": "0a048f96432d90cac98cd282e46e3d2174c23fbe7039c50b60c33dec115df8fd",
+    "time": 1693775565,
+    "saplingTree": "000000",
+    "orchardTree": "000000"
+}
