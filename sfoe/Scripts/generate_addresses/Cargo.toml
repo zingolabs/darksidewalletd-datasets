@@ -1,0 +1,20 @@
+[package]
+name = "generate_addresses"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+## tooling 
+
+tokio =  { version = "1.24.2", features = ["full"] }
+clap = { version = "3.1.6", features = ["derive"] }
+
+## zingo 
+zingolib = { version = "0.2.0", git = "https://github.com/zingolabs/zingolib.git" }
+zingoconfig = { version = "0.1.0", git = "https://github.com/zingolabs/zingolib.git" }
+
+## zcash 
+zcash_address = { git = "https://github.com/zingolabs/librustzcash", rev = "fa67d9a645da55265ebea8cedbb77ff42317c726" }
